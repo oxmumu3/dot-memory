@@ -119,7 +119,7 @@ test('MCP stdio server handles initialize, tools/list, record_handoff, propose &
     assert.equal(init.result.serverInfo.name, 'dot-memory');
 
     const list = await rpc(2, 'tools/list');
-    assert.equal(list.result.tools.length, 6);
+    assert.equal(list.result.tools.length, 7);
 
     const rec = await rpc(3, 'tools/call', {
       name: 'dot_memory_record_handoff',

@@ -11,6 +11,11 @@ import { FlashbackEngine } from './flashback.mjs';
 import { HandoffBus } from './handoff-bus.mjs';
 import { rankHybridLexical } from './hybrid-search.mjs';
 import {
+  hasRetrospectiveRecallIntent,
+  renderTriggeredWikiBlock,
+  selectTriggeredWikiPages,
+} from './trigger-recall.mjs';
+import {
   LIVING_MEMORY_BUCKETS,
   LIVING_MEMORY_MAX_BYTES,
   activeMemoryBytes,
@@ -173,8 +178,30 @@ export class DotMemoryStore {
     if (res.ran) {
       this.#saveLiving(res.memory, now);
       this.syncWiki({ now });
+      try { this.wiki.archiveDormantPages({ maxIdleDays: 30, now }); } catch {}
     }
     return res;
+  }
+
+  getWikiTimeline(key, { limit = 20 } = {}) {
+    this.ensureInitialized();
+    const handoffs = this.handoffs.list({ limit: 100, sinceDays: 90 });
+    return this.wiki.deriveTimeline(key, { handoffs, limit });
+  }
+
+  recall(message, { limit = 3, now = new Date() } = {}) {
+    this.ensureInitialized();
+    const matches = selectTriggeredWikiPages(message, this.wiki.listPages(), { limit, now });
+    return {
+      matches,
+      retrospectiveIntent: hasRetrospectiveRecallIntent(message),
+      envelope: renderTriggeredWikiBlock(matches),
+    };
+  }
+
+  archiveDormantWiki({ maxIdleDays = 30, now = new Date(), keepKeys = [] } = {}) {
+    this.ensureInitialized();
+    return this.wiki.archiveDormantPages({ maxIdleDays, now, keepKeys });
   }
 
   search({ query, alternates = [], limit = 10 } = {}) {

@@ -44,13 +44,27 @@ const TOOLS = [
   },
   {
     name: 'dot_memory_wiki_read',
-    description: 'List Entity Wiki pages or read a specific page by key (e.g. "project/dot-memory" or "topic/active-focus").',
+    description: 'List Entity Wiki pages or read a specific page by key (e.g. "project/dot-memory"), optionally with derived timeline.',
     inputSchema: {
       type: 'object',
       additionalProperties: false,
       properties: {
         key: { type: 'string', description: 'Page key like "project/dot-memory". Omit to list all pages.' },
         type: { type: 'string', description: 'Optional filter when listing: project | topic | session | contact | client' },
+        includeTimeline: { type: 'boolean', description: 'Append derived chronological timeline from handoffs and related sessions' },
+      },
+    },
+  },
+  {
+    name: 'dot_memory_recall',
+    description: 'Zero-LLM active trigger recall (Lane 1) matching Entity Wiki dossiers against a user message in <5ms.',
+    inputSchema: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['message'],
+      properties: {
+        message: { type: 'string', description: 'User message to match against Entity Wiki triggers, titles, and aliases' },
+        limit: { type: 'number', description: 'Max pages to recall (default 3)' },
       },
     },
   },
@@ -141,11 +155,28 @@ export function handleMcpToolCall(name, args = {}, targetStore = store) {
     if (!args.key) {
       const pages = targetStore.wiki.listPages({ type: args.type || null });
       if (pages.length === 0) return 'Entity Wiki is empty.';
-      return pages.map((p) => `- ${p.key} · ${p.title} (facts:${p.facts.length}, open:${p.openItems.length}, updated:${String(p.updatedAt || '').slice(0, 10)})`).join('\n');
+      return pages.map((p) => `- ${p.key} [#${p.hashPrefix}] · ${p.title} (facts:${p.facts.length}, open:${p.openItems.length}, updated:${String(p.updatedAt || '').slice(0, 10)})`).join('\n');
     }
     const page = targetStore.wiki.readPage(args.key);
     if (!page) return `Wiki page not found: ${args.key}`;
+    if (args.includeTimeline) {
+      const tl = targetStore.getWikiTimeline(args.key);
+      const tlLines = tl?.items?.length
+        ? ['', '## Derived Timeline', '', ...tl.items.map((it) => `- [${it.date}] (${it.kind}) ${it.summary}`)]
+        : [];
+      return `${page.raw}${tlLines.join('\n')}`;
+    }
     return page.raw;
+  }
+
+  if (name === 'dot_memory_recall') {
+    const res = targetStore.recall(args.message, { limit: Math.min(Math.max(Number(args.limit) || 3, 1), 5) });
+    if (res.matches.length === 0) {
+      return res.retrospectiveIntent
+        ? 'No direct trigger hits, but retrospective recall intent detected — run dot_memory_search.'
+        : 'No direct trigger hits.';
+    }
+    return res.envelope;
   }
 
   if (name === 'dot_memory_handoffs') {
