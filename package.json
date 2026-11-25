@@ -1,0 +1,90 @@
+{
+  "name": "@oxmumu3/dot-memory",
+  "version": "0.1.0",
+  "private": false,
+  "license": "MIT",
+  "type": "module",
+  "main": "index.js",
+  "description": "Dot 记忆总线 — Cross-agent local memory bus for DeepSeek Harness, Claude Code, Codex & Antigravity: 4KB cache-friendly living memory with verbatim quote verification, zero-LLM Entity Wiki & Flashback, and cross-agent handoff capture.",
+  "author": "牛村木木山 <157776623+oxmumu3@users.noreply.github.com>",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/oxmumu3/dot-memory"
+  },
+  "homepage": "https://github.com/oxmumu3/dot-memory#readme",
+  "bugs": {
+    "url": "https://github.com/oxmumu3/dot-memory/issues"
+  },
+  "keywords": [
+    "deepseek-harness",
+    "dsh",
+    "dsh-plugin",
+    "memory",
+    "agent-memory",
+    "mcp",
+    "living-memory",
+    "cross-agent",
+    "handoff",
+    "entity-wiki"
+  ],
+  "icon": "./icon.svg",
+  "bin": {
+    "dot-memory": "./bin/dot-memory.mjs",
+    "dot-memory-mcp": "./bin/dot-memory-mcp.mjs"
+  },
+  "exports": {
+    ".": "./index.js",
+    "./core": "./src/core/index.mjs",
+    "./client": "./dist/client.js",
+    "./locale/*.json": "./locale/*.json",
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "index.js",
+    "dist/client.js",
+    "src/",
+    "bin/",
+    "locale/",
+    "cordis.patch.yml",
+    "icon.svg",
+    "LICENSE",
+    "README.md",
+    "CHANGELOG.md"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "tag": "latest",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "scripts": {
+    "build": "node scripts/build-client.mjs",
+    "test": "node scripts/build-client.mjs && node --test test/*.test.mjs",
+    "check:client": "node scripts/check-client.mjs"
+  },
+  "dsh": {
+    "manifestVersion": 1,
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true,
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-renderer",
+        "@deepseek-ai/dsh-client-ui-layout",
+        "@deepseek-ai/dsh-client-ui-sidebar",
+        "@deepseek-ai/dsh-client-ui-plugin-manager",
+        "@deepseek-ai/dsh-client-ui-theme",
+        "@deepseek-ai/dsh-client-locale"
+      ],
+      "external": [
+        "react"
+      ]
+    }
+  },
+  "engines": {
+    "node": ">=22.0.0",
+    "dsh": ">=0.2.2-rc.2 <0.3.0"
+  }
+}

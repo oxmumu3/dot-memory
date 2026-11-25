@@ -1,0 +1,44 @@
+{
+  "plugin": {
+    "title": "Dot Memory Bus",
+    "description": "Cross-agent local memory bus for DeepSeek Harness, Claude Code, Codex & Antigravity: 4KB verbatim-verified living memory, zero-LLM Entity Wiki, and cross-agent handoffs."
+  },
+  "nav": {
+    "label": "Dot Memory"
+  },
+  "tabs": {
+    "living": "Living Memory",
+    "handoffs": "Handoffs",
+    "wiki": "Wiki & Connect"
+  },
+  "actions": {
+    "add": "Add Memory",
+    "dream": "Run Dreaming",
+    "sync": "Sync Wiki",
+    "approve": "Approve",
+    "reject": "Dismiss",
+    "togglePause": "Pause",
+    "toggleResume": "Resume",
+    "remove": "Delete",
+    "copy": "Copy",
+    "close": "Close",
+    "save": "Save",
+    "cancel": "Cancel"
+  },
+  "buckets": {
+    "rules": "Rules & Boundaries",
+    "style": "Working Style",
+    "focus": "Active Focus"
+  },
+  "badges": {
+    "verified": "Quoted",
+    "newItem": "New",
+    "updatedItem": "Metabolized",
+    "paused": "Paused"
+  },
+  "empty": {
+    "living": "No living memories yet. Add a preference manually or let Dreaming metabolize recent handoffs.",
+    "handoffs": "No cross-agent handoffs recorded yet. Connect Antigravity, Claude Code, or Codex hooks or finish a substantive turn.",
+    "wiki": "No Entity Wiki pages yet. Click Sync Wiki or record your first handoff to bootstrap project dossiers."
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "plugin": {
+    "title": "Dot 记忆总线",
+    "description": "跨 Antigravity、Claude Code、Codex 与 DeepSeek Harness 的本地共享记忆总线：4KB 原话实证活体记忆、零向量实体 Wiki 与跨端交接流。"
+  },
+  "nav": {
+    "label": "Dot 记忆总线"
+  },
+  "tabs": {
+    "living": "活体记忆",
+    "handoffs": "跨端交接",
+    "wiki": "实体档案 & 连接"
+  },
+  "actions": {
+    "add": "手动新增",
+    "dream": "整理代谢 (Dream)",
+    "sync": "刷新档案",
+    "approve": "采纳入库",
+    "reject": "忽略",
+    "togglePause": "暂停",
+    "toggleResume": "恢复",
+    "remove": "移除",
+    "copy": "复制",
+    "close": "关闭",
+    "save": "保存",
+    "cancel": "取消"
+  },
+  "buckets": {
+    "rules": "规则与边界",
+    "style": "偏好与品味",
+    "focus": "近期主线焦点"
+  },
+  "badges": {
+    "verified": "原话可核",
+    "newItem": "新",
+    "updatedItem": "已代谢更新",
+    "paused": "已暂停"
+  },
+  "empty": {
+    "living": "还没有写入活体记忆。你可以手动新增一条偏好，或在其他 Agent 对话后由 Dreaming 自动代谢汇总。",
+    "handoffs": "暂未捕获跨端交接记录。接入 Antigravity / Claude Code / Codex 钩子或在本机完成一轮长任务后，交接动态会出现在这里。",
+    "wiki": "实体档案尚未生成。点击「刷新档案」或记录首条跨端交接，会自动建起项目与焦点 Wiki。"
+  }
+}
