@@ -288,7 +288,12 @@ async function main() {
   process.exit(1);
 }
 
-const isCli = process.argv[1]?.endsWith('dot-memory.mjs');
+let isCli = false;
+try {
+  isCli = Boolean(process.argv[1]) && fs.realpathSync(process.argv[1]) === fileURLToPath(import.meta.url);
+} catch {
+  isCli = Boolean(process.argv[1]?.endsWith('dot-memory.mjs'));
+}
 if (isCli) {
   main().catch((err) => {
     console.error(err?.message || String(err));
