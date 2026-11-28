@@ -14,8 +14,8 @@ import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 
 const SRC_APP = '/Applications/DeepSeek Harness.app';
-const TARBALL = '/Users/shan/Repos/dot-memory/dist-pack/oxmumu3-dot-memory-0.1.0.tgz';
-const OUT_SHOT = '/Users/shan/Library/Mobile Documents/com~apple~CloudDocs/Agent/output/dot-memory-v010-2026-11-25/screenshots/07-dsh-023-live-desktop.png';
+const TARBALL = '/Users/shan/Repos/dot-memory/dist-pack/oxmumu3-dot-memory-0.2.0.tgz';
+const OUT_SHOT = '/Users/shan/Library/Mobile Documents/com~apple~CloudDocs/Agent/output/dot-memory-v020-2026-11-28/screenshots/09-dsh-023-live-desktop-connect.png';
 
 const LIVE_PROFILE = path.join(os.homedir(), '.dsh', 'profiles', 'desktop');
 const LIVE_PKG = path.join(LIVE_PROFILE, 'package.json');
@@ -89,6 +89,12 @@ fs.writeFileSync(
   path.join(DOT_MEMORY_HOME, 'living-memory.json'),
   JSON.stringify({ version: 1, items: initialMemItems, candidates: [], clues: [], removedRules: [], lastDreamAt: '2026-11-25T15:00:00Z' }, null, 2),
 );
+
+// Seed isolated fake Claude Code + Hermes configs inside FIX (never touches real HOME!)
+fs.mkdirSync(path.join(FIX, '.claude'), { recursive: true });
+fs.writeFileSync(path.join(FIX, '.claude', 'settings.json'), JSON.stringify({ theme: 'dark' }, null, 2));
+fs.mkdirSync(path.join(FIX, '.hermes'), { recursive: true });
+fs.writeFileSync(path.join(FIX, '.hermes', 'config.yaml'), 'model:\n  default: deepseek-v4-pro\n  mcp:\n    provider: auto\nmcp_servers: {}\n');
 
 let hangServer;
 const proxySockets = new Set();
@@ -309,7 +315,16 @@ async function openDotMemoryPanel(ui) {
 }
 
 const exceptions = [];
-const receipt = { ok: false, livePkgIntact: false, release: null, scrollTop: 0, persistedAcrossRestart: false, exceptions: [], newCrashLogs: [] };
+const receipt = {
+  ok: false,
+  livePkgIntact: false,
+  release: null,
+  scrollTop: 0,
+  connectedInDesktop: false,
+  persistedAcrossRestart: false,
+  exceptions: [],
+  newCrashLogs: [],
+};
 let app = null;
 let ui = null;
 
@@ -355,6 +370,31 @@ try {
   await delay(100);
   await ui.evaluate(`document.querySelector('[data-testid="dm-add-submit"]').click()`);
   await ui.waitFor('added item visible in Boot 1', () => ui.evaluate(`document.body.innerText.includes(${JSON.stringify(ADDED_TEXT)})`), 10000);
+
+  // Switch to Connect tab and click Connect All inside the real Electron app
+  await ui.evaluate(`document.querySelector('[data-testid="dm-tab-connect"]').click()`);
+  await ui.waitFor('connect tab mounted', () => ui.evaluate(`Boolean(document.querySelector('[data-testid="dm-btn-connect-all"]'))`), 8000);
+  await ui.evaluate(`document.querySelector('[data-testid="dm-btn-connect-all"]').click()`);
+  await ui.waitFor('claude & hermes connected in UI', () => ui.evaluate(`(() => {
+    const c = document.querySelector('[data-testid="dm-conn-row-claude-code"]')?.innerText || '';
+    const h = document.querySelector('[data-testid="dm-conn-row-hermes"]')?.innerText || '';
+    return c.includes('自动写 Hook 已接') && c.includes('主动读 MCP 已接') && h.includes('自动写 Hook 已接') && h.includes('主动读 MCP 已接');
+  })()`), 10000);
+
+  // Verify real isolated files, non-Electron node command, and automatic backups
+  const isolatedClaude = JSON.parse(fs.readFileSync(path.join(FIX, '.claude.json'), 'utf8'));
+  const isolatedClaudeSettings = JSON.parse(fs.readFileSync(path.join(FIX, '.claude', 'settings.json'), 'utf8'));
+  const isolatedHermes = fs.readFileSync(path.join(FIX, '.hermes', 'config.yaml'), 'utf8');
+  assert.ok(isolatedClaude.mcpServers['dot-memory']?.command, 'Missing claude-code mcpServers entry');
+  assert.equal(isolatedClaude.mcpServers['dot-memory'].command.includes('DeepSeek Harness.app/Contents/MacOS/'), false, 'Electron binary leaked into MCP command!');
+  assert.ok(JSON.stringify(isolatedClaudeSettings.hooks?.Stop || []).includes('dot-memory.mjs'), 'Missing claude-code Stop hook');
+  assert.match(isolatedHermes, /dot-memory:/, 'Missing hermes mcp_servers entry');
+  assert.ok(fs.existsSync(path.join(FIX, '.hermes', 'hooks', 'dot-memory-handoff', 'handler.py')), 'Missing hermes handler.py');
+  assert.ok(fs.readdirSync(path.join(DOT_MEMORY_HOME, 'backups')).length >= 2, 'Expected automatic backups before editing configs');
+  receipt.connectedInDesktop = true;
+
+  const shotConnect = await ui.command('Page.captureScreenshot', { format: 'png', fromSurface: true });
+  fs.writeFileSync(OUT_SHOT, Buffer.from(shotConnect.data, 'base64'));
 
   await ui.close();
   ui = null;

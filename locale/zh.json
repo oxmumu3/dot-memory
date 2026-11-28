@@ -1,7 +1,7 @@
 {
   "plugin": {
     "title": "Dot 记忆总线",
-    "description": "跨 Antigravity、Claude Code、Codex 与 DeepSeek Harness 的本地共享记忆总线：4KB 原话实证活体记忆、零向量实体 Wiki 与跨端交接流。"
+    "description": "跨 Antigravity、Claude Code、Codex、Hermes、WorkBuddy、Cursor 与 DeepSeek Harness 的本地共享记忆总线：4KB 原话实证活体记忆、零向量实体 Wiki 与一键跨端 Hook+MCP 接入。"
   },
   "nav": {
     "label": "Dot 记忆总线"
@@ -9,7 +9,8 @@
   "tabs": {
     "living": "活体记忆",
     "handoffs": "跨端交接",
-    "wiki": "实体档案 & 连接"
+    "wiki": "实体档案",
+    "connect": "本机连接"
   },
   "actions": {
     "add": "手动新增",
@@ -23,7 +24,11 @@
     "copy": "复制",
     "close": "关闭",
     "save": "保存",
-    "cancel": "取消"
+    "cancel": "取消",
+    "connectAll": "一键接入全部",
+    "connectOne": "一键接入",
+    "disconnect": "断开",
+    "rescan": "重新扫描"
   },
   "buckets": {
     "rules": "规则与边界",

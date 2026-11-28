@@ -1,7 +1,7 @@
 {
   "plugin": {
     "title": "Dot Memory Bus",
-    "description": "Cross-agent local memory bus for DeepSeek Harness, Claude Code, Codex & Antigravity: 4KB verbatim-verified living memory, zero-LLM Entity Wiki, and cross-agent handoffs."
+    "description": "Cross-agent local memory bus for DeepSeek Harness, Claude Code, Codex, Antigravity, Hermes, WorkBuddy & Cursor: 4KB verbatim-verified living memory, zero-LLM Entity Wiki, and one-click Hook+MCP setup."
   },
   "nav": {
     "label": "Dot Memory"
@@ -9,7 +9,8 @@
   "tabs": {
     "living": "Living Memory",
     "handoffs": "Handoffs",
-    "wiki": "Wiki & Connect"
+    "wiki": "Entity Wiki",
+    "connect": "Connections"
   },
   "actions": {
     "add": "Add Memory",
@@ -23,7 +24,11 @@
     "copy": "Copy",
     "close": "Close",
     "save": "Save",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "connectAll": "Connect All",
+    "connectOne": "Connect",
+    "disconnect": "Disconnect",
+    "rescan": "Rescan"
   },
   "buckets": {
     "rules": "Rules & Boundaries",

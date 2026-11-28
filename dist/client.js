@@ -116,10 +116,15 @@ const DM_CSS = [
   '.dm-tab-count{font-size:11px;padding:1px 6px;border-radius:999px;background:var(--dm-sub);color:var(--dm-ink2);font-variant-numeric:tabular-nums}',
   '.dm-tab.active .dm-tab-count{background:var(--dm-run-bg);color:var(--dm-run)}',
 
-  // Notice banner
+  // Notice & Day-0 connect banners
   '.dm-notice{padding:10px 14px;border-radius:var(--dm-r-md);border:1px solid var(--dm-line2);background:var(--dm-panel);font-size:12.5px;display:flex;align-items:center;justify-content:space-between;gap:10px}',
   '.dm-notice.ok{border-color:var(--dm-ok-line);background:var(--dm-ok-bg);color:var(--dm-ok)}',
   '.dm-notice.bad{border-color:var(--dm-bad-line);background:var(--dm-bad-bg);color:var(--dm-bad)}',
+  '.dm-connect-banner{padding:12px 15px;border-radius:var(--dm-r-lg);border:1px solid var(--dm-run-line);background:var(--dm-run-bg);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}',
+  '.dm-connect-banner-main{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1 1 260px}',
+  '.dm-connect-banner-title{font-size:13px;font-weight:700;color:var(--dm-ink)}',
+  '.dm-connect-banner-sub{font-size:12px;color:var(--dm-ink2)}',
+  '.dm-connect-banner-acts{display:flex;align-items:center;gap:8px;flex-wrap:wrap}',
 
   // Budget bar
   '.dm-budget-card{border-radius:var(--dm-r-lg);border:1px solid var(--dm-line2);background:var(--dm-panel);padding:14px 16px;display:flex;flex-direction:column;gap:8px}',
@@ -172,12 +177,22 @@ const DM_CSS = [
   '.dm-dlg-foot{padding:12px 18px;border-top:1px solid var(--dm-line);display:flex;align-items:center;justify-content:flex-end;gap:8px}',
   '.dm-quote-box{border-radius:var(--dm-r-sm);border-left:3px solid var(--dm-ok);background:var(--dm-sub);padding:10px 12px;font-size:12.5px;color:var(--dm-ink2)}',
 
+  // Connectors & details
+  '.dm-conn-row{border-radius:var(--dm-r-md);border:1px solid var(--dm-line);background:var(--dm-bg);padding:12px 14px;display:flex;align-items:center;justify-content:space-between;gap:12px;min-width:0}',
+  '.dm-conn-row.uninstalled{opacity:.68}',
+  '.dm-conn-head{display:flex;align-items:center;flex-wrap:wrap;gap:6px}',
+  '.dm-details{border-radius:var(--dm-r-lg);border:1px solid var(--dm-line2);background:var(--dm-panel);padding:12px 16px}',
+  '.dm-details summary{cursor:pointer;font-size:13px;font-weight:600;color:var(--dm-ink);list-style:none;display:flex;align-items:center;justify-content:space-between;gap:8px}',
+  '.dm-details summary::-webkit-details-marker{display:none}',
+  '.dm-details[open] summary{margin-bottom:10px}',
+
   // Container query strictly AFTER base grids for ~680px DSH split panel & narrow screens
   '@container dmroot (max-width: 660px){',
   '  .dm-inner{padding:16px 14px 56px}',
   '  .dm-wiki-grid{grid-template-columns:minmax(0,1fr)}',
-  '  .dm-row{flex-direction:column}',
+  '  .dm-row,.dm-conn-row{flex-direction:column;align-items:stretch}',
   '  .dm-row-acts{width:100%;justify-content:flex-end}',
+  '  .dm-connect-banner-acts{width:100%;justify-content:flex-end}',
   '}',
 ].join('\n');
 
@@ -437,6 +452,9 @@ function makeWorkbenchComponent(React, ctx, options) {
     var _integ = React.useState(initialData ? initialData.integrations : null);
     var integrations = _integ[0];
     var setIntegrations = _integ[1];
+    var _conn = React.useState(initialData ? initialData.connections : null);
+    var connections = _conn[0];
+    var setConnections = _conn[1];
     var _tab = React.useState('living');
     var tab = _tab[0];
     var setTab = _tab[1];
@@ -477,6 +495,7 @@ function makeWorkbenchComponent(React, ctx, options) {
       return fetchJson(VIEW_URL, { headers: { Accept: 'application/json' } }).then(function (res) {
         if (res.snapshot) setSnapshot(res.snapshot);
         if (res.integrations) setIntegrations(res.integrations);
+        if (res.connections) setConnections(res.connections);
       }).catch(function (err) {
         flash('加载记忆总线失败：' + (err && err.message ? err.message : String(err)), 'bad');
       });
@@ -493,6 +512,7 @@ function makeWorkbenchComponent(React, ctx, options) {
       return Promise.resolve(runner).then(function (res) {
         setBusy(false);
         if (res && res.snapshot) setSnapshot(res.snapshot);
+        if (res && res.connections) setConnections(res.connections);
         if (okMsg) flash(okMsg, 'ok');
         return res;
       }).catch(function (err) {
@@ -508,6 +528,31 @@ function makeWorkbenchComponent(React, ctx, options) {
     var activeWikiKey = selectedWiki || (wikiPages[0] && wikiPages[0].key) || null;
     var activeWiki = wikiPages.find(function (p) { return p.key === activeWikiKey; }) || wikiPages[0] || null;
     var pct = Math.min(100, Math.round((budget.usedBytes / Math.max(1, budget.maxBytes)) * 100));
+    var connList = (connections && connections.agents) || [];
+    var connSummary = (connections && connections.summary) || {
+      total: connList.length || 6,
+      installedCount: 0,
+      connectedCount: 0,
+      partialCount: 0,
+      unconnectedInstalled: [],
+    };
+    var pendingConnectLabels = connList
+      .filter(function (a) { return a.installed && !a.fullyConnected; })
+      .map(function (a) { return a.label; });
+
+    var baseFilterAgents = [
+      ['all', '全部'],
+      ['antigravity', 'Antigravity'],
+      ['claude-code', 'Claude Code'],
+      ['codex', 'Codex'],
+      ['dsh', 'DSH'],
+    ];
+    var extraFilterMap = { hermes: 'Hermes', workbuddy: 'WorkBuddy', cursor: 'Cursor' };
+    Object.keys(extraFilterMap).forEach(function (eid) {
+      if (handoffs.some(function (hf) { return hf.agent === eid; })) {
+        baseFilterAgents.push([eid, extraFilterMap[eid]]);
+      }
+    });
 
     var filteredHandoffs = agentFilter === 'all'
       ? handoffs
@@ -521,6 +566,10 @@ function makeWorkbenchComponent(React, ctx, options) {
       });
     }
 
+    var mcpSnippetObj = (connections && connections.snippets && connections.snippets.mcpServer)
+      || (integrations && integrations.mcpServer)
+      || { command: 'dot-memory-mcp' };
+
     return h('div', { className: 'dm-root', 'data-testid': 'dm-workbench' },
       h('div', { className: 'dm-inner' },
         // Header
@@ -530,7 +579,8 @@ function makeWorkbenchComponent(React, ctx, options) {
             h('h1', { className: 'dm-h1' }, 'Dot 记忆总线'),
             h('div', { className: 'dm-subline' },
               '4KB 活体记忆 ' + budget.usedBytes + ' / ' + budget.maxBytes + ' B · ' +
-              handoffs.length + ' 条跨端交接 · ' + wikiPages.length + ' 页实体档案',
+              handoffs.length + ' 条跨端交接 · ' + wikiPages.length + ' 页实体档案' +
+              (connections ? ' · 已连 ' + connSummary.connectedCount + '/' + connSummary.installedCount + ' 个本机 Agent' : ''),
             ),
           ),
           h('div', { className: 'dm-head-acts' },
@@ -562,6 +612,33 @@ function makeWorkbenchComponent(React, ctx, options) {
           h('button', { type: 'button', className: 'dm-btn ghost xs', onClick: function () { setNotice(null); } }, '关闭'),
         ) : null,
 
+        pendingConnectLabels.length > 0 && tab !== 'connect' ? h('div', { className: 'dm-connect-banner', 'data-testid': 'dm-connect-banner' },
+          h('div', { className: 'dm-connect-banner-main' },
+            h('div', { className: 'dm-connect-banner-title' },
+              '检测到本机还有 ' + pendingConnectLabels.length + ' 个 Agent 未接入共享总线（' + pendingConnectLabels.join('、') + '）',
+            ),
+            h('div', { className: 'dm-connect-banner-sub' },
+              '只配各端的 Stop Hook 与 stdio MCP，写入前自动备份，绝不改写你的 CLAUDE.md / AGENTS.md。',
+            ),
+          ),
+          h('div', { className: 'dm-connect-banner-acts' },
+            h('button', {
+              type: 'button',
+              className: 'dm-btn solid sm',
+              'data-testid': 'dm-btn-connect-all-banner',
+              disabled: busy,
+              onClick: function () {
+                dispatch('connect_all_installed', {}, '已一键接入全部检测到的本机 Agent（若已打开客户端请重启生效）');
+              },
+            }, '一键接入全部'),
+            h('button', {
+              type: 'button',
+              className: 'dm-btn line sm',
+              onClick: function () { setTab('connect'); },
+            }, '管理连接'),
+          ),
+        ) : null,
+
         // Tabs
         h('nav', { className: 'dm-tabs', role: 'tablist' },
           h('button', {
@@ -584,7 +661,14 @@ function makeWorkbenchComponent(React, ctx, options) {
             className: 'dm-tab' + (tab === 'wiki' ? ' active' : ''),
             'data-testid': 'dm-tab-wiki',
             onClick: function () { setTab('wiki'); },
-          }, '实体档案 & 连接', h('span', { className: 'dm-tab-count' }, String(wikiPages.length))),
+          }, '实体档案', h('span', { className: 'dm-tab-count' }, String(wikiPages.length))),
+          h('button', {
+            type: 'button',
+            role: 'tab',
+            className: 'dm-tab' + (tab === 'connect' ? ' active' : ''),
+            'data-testid': 'dm-tab-connect',
+            onClick: function () { setTab('connect'); },
+          }, '本机连接', h('span', { className: 'dm-tab-count' }, String(connSummary.connectedCount) + '/' + String(connSummary.installedCount))),
         ),
 
         // Tab 1: Living Memory
@@ -680,13 +764,7 @@ function makeWorkbenchComponent(React, ctx, options) {
           h('div', { className: 'dm-section-head' },
             h('h2', { className: 'dm-section-title' }, '跨 Agent 交接时间线'),
             h('div', { className: 'dm-filter-bar' },
-              [
-                ['all', '全部'],
-                ['antigravity', 'Antigravity'],
-                ['claude-code', 'Claude Code'],
-                ['codex', 'Codex'],
-                ['dsh', 'DSH'],
-              ].map(function (pair) {
+              baseFilterAgents.map(function (pair) {
                 return h('button', {
                   key: pair[0],
                   type: 'button',
@@ -795,25 +873,120 @@ function makeWorkbenchComponent(React, ctx, options) {
               ) : null,
             ) : h('div', { className: 'dm-empty' }, '点击左侧实体档案查看详情与溯源'),
           ),
+        ) : null,
 
+        // Tab 4: Local Agent Connections
+        tab === 'connect' ? h(React.Fragment, null,
           h('section', { className: 'dm-section' },
-            h('div', { className: 'dm-section-head' },
-              h('h2', { className: 'dm-section-title' }, '接入其他本机 Agent（Claude Code / Codex / Antigravity）'),
-              h('button', {
-                type: 'button',
-                className: 'dm-btn line xs',
-                onClick: function () {
-                  var snippet = JSON.stringify({ mcpServers: { 'dot-memory': integrations ? integrations.mcpServer : { command: 'dot-memory-mcp' } } }, null, 2);
-                  copyText(snippet, function () { flash('已复制 MCP 配置 JSON', 'ok'); });
-                },
-              }, '复制 MCP JSON'),
+            h('div', { className: 'dm-section-head', style: { flexWrap: 'wrap' } },
+              h('div', null,
+                h('h2', { className: 'dm-section-title' }, '本机 Agent 自动写入 & 主动读取接线'),
+                h('div', { className: 'dm-subline' }, '自动写靠各端 Stop Hook（0 Token）；主动查靠标准 stdio MCP；写入前自动备份，绝不改写你的 CLAUDE.md / AGENTS.md。'),
+              ),
+              h('div', { className: 'dm-head-acts' },
+                h('button', {
+                  type: 'button',
+                  className: 'dm-btn line sm',
+                  'data-testid': 'dm-btn-rescan',
+                  disabled: busy,
+                  onClick: function () { dispatch('refresh_connections', {}, '已重新扫描本机 Agent 状态'); },
+                }, '重新扫描'),
+                h('button', {
+                  type: 'button',
+                  className: 'dm-btn solid sm',
+                  'data-testid': 'dm-btn-connect-all',
+                  disabled: busy || connSummary.installedCount === 0,
+                  onClick: function () {
+                    dispatch('connect_all_installed', {}, '已接入全部本机已安装的 Agent（若客户端已打开请重启）');
+                  },
+                }, '一键接入全部已装'),
+              ),
             ),
-            h('pre', { className: 'dm-code' },
-              '# 一键接入 Antigravity / Claude Code Stop Hook\n' +
-              'npx @oxmumu3/dot-memory install-hooks --agent antigravity\n' +
-              'npx @oxmumu3/dot-memory install-hooks --agent claude-code\n\n' +
-              '# 标准 stdio MCP 入口\n' +
-              JSON.stringify(integrations ? integrations.mcpServer : { command: 'dot-memory-mcp' }, null, 2),
+            connList.length === 0
+              ? h('div', { className: 'dm-empty' }, '暂未加载到本机 Agent 状态，请点「重新扫描」。')
+              : h('div', { className: 'dm-list' },
+                connList.map(function (ag) {
+                  var anyConn = !!(ag.hookConnected || ag.mcpConnected);
+                  return h('div', {
+                    key: ag.id,
+                    className: 'dm-conn-row' + (ag.installed ? '' : ' uninstalled'),
+                    'data-testid': 'dm-conn-row-' + ag.id,
+                  },
+                    h('div', { className: 'dm-row-main' },
+                      h('div', { className: 'dm-conn-head' },
+                        h('span', { className: 'dm-row-title' }, ag.label),
+                        h('span', { className: 'dm-tag ' + (ag.installed ? 'ok' : '') }, ag.installed ? '本机已安装' : '未检测到'),
+                        ag.hookSupported
+                          ? h('span', { className: 'dm-tag ' + (ag.hookConnected ? 'ok' : 'wait') }, ag.hookConnected ? '自动写 Hook 已接' : '自动写 Hook 未接')
+                          : h('span', { className: 'dm-tag' }, '无独立 Hook'),
+                        ag.mcpSupported
+                          ? h('span', { className: 'dm-tag ' + (ag.mcpConnected ? 'ok' : 'wait') }, ag.mcpConnected ? '主动读 MCP 已接' : '主动读 MCP 未接')
+                          : null,
+                      ),
+                      h('div', { className: 'dm-subline' }, ag.note),
+                    ),
+                    h('div', { className: 'dm-row-acts' },
+                      ag.fullyConnected ? h(React.Fragment, null,
+                        h('button', {
+                          type: 'button',
+                          className: 'dm-btn line xs',
+                          'data-testid': 'dm-btn-connect-' + ag.id,
+                          disabled: busy,
+                          onClick: function () { dispatch('connect_agent', { agent: ag.id }, '已刷新 ' + ag.label + ' 的 Hook 与 MCP 路径'); },
+                        }, '更新路径'),
+                        h('button', {
+                          type: 'button',
+                          className: 'dm-btn danger-text xs',
+                          'data-testid': 'dm-btn-disconnect-' + ag.id,
+                          disabled: busy,
+                          onClick: function () { dispatch('disconnect_agent', { agent: ag.id }, '已断开 ' + ag.label + ' 的接入（原配置已备份）'); },
+                        }, '断开'),
+                      ) : h(React.Fragment, null,
+                        h('button', {
+                          type: 'button',
+                          className: ag.installed ? 'dm-btn solid xs' : 'dm-btn soft xs',
+                          'data-testid': 'dm-btn-connect-' + ag.id,
+                          disabled: busy,
+                          onClick: function () { dispatch('connect_agent', { agent: ag.id }, '已接入 ' + ag.label + '（重启客户端后生效）'); },
+                        }, ag.installed ? '一键接入' : '预写入'),
+                        anyConn ? h('button', {
+                          type: 'button',
+                          className: 'dm-btn danger-text xs',
+                          'data-testid': 'dm-btn-disconnect-' + ag.id,
+                          disabled: busy,
+                          onClick: function () { dispatch('disconnect_agent', { agent: ag.id }, '已断开 ' + ag.label + ' 的接入（原配置已备份）'); },
+                        }, '断开') : null,
+                      ),
+                    ),
+                  );
+                }),
+              ),
+          ),
+
+          h('details', { className: 'dm-details' },
+            h('summary', null,
+              h('span', null, '其他 MCP 客户端手动配置（Windsurf / Cline / Cherry Studio 等）'),
+              h('span', { className: 'dm-subline' }, '展开查看 JSON 与 CLI 命令'),
+            ),
+            h('div', { style: { display: 'flex', flexDirection: 'column', gap: '10px' } },
+              h('div', { className: 'dm-section-head' },
+                h('span', { className: 'dm-subline' }, '标准 stdio MCP 片段（自动锁定本机稳定 Node 路径）'),
+                h('button', {
+                  type: 'button',
+                  className: 'dm-btn line xs',
+                  onClick: function () {
+                    var snippet = JSON.stringify({ mcpServers: { 'dot-memory': mcpSnippetObj } }, null, 2);
+                    copyText(snippet, function () { flash('已复制 MCP 配置 JSON', 'ok'); });
+                  },
+                }, '复制 MCP JSON'),
+              ),
+              h('pre', { className: 'dm-code' },
+                '# 终端一键扫描与接入全部本机 Agent\n' +
+                'npx @oxmumu3/dot-memory connect --agent all\n' +
+                'npx @oxmumu3/dot-memory connections\n\n' +
+                '# 标准 stdio MCP 入口\n' +
+                JSON.stringify({ mcpServers: { 'dot-memory': mcpSnippetObj } }, null, 2),
+              ),
             ),
           ),
         ) : null,

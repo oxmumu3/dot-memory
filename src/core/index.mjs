@@ -45,3 +45,13 @@ export {
   readSafeJson,
   isoDate,
 } from './storage.mjs';
+export {
+  SUPPORTED_AGENTS,
+  shellQuote,
+  resolveRuntimePaths,
+  backupFileBeforeEdit,
+  detectAgentConnections,
+  connectAgent,
+  connectAllInstalled,
+  disconnectAgent,
+} from './agent-connectors.mjs';

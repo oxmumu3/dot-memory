@@ -107,10 +107,15 @@ export const DM_CSS = [
   '.dm-tab-count{font-size:11px;padding:1px 6px;border-radius:999px;background:var(--dm-sub);color:var(--dm-ink2);font-variant-numeric:tabular-nums}',
   '.dm-tab.active .dm-tab-count{background:var(--dm-run-bg);color:var(--dm-run)}',
 
-  // Notice banner
+  // Notice & Day-0 connect banners
   '.dm-notice{padding:10px 14px;border-radius:var(--dm-r-md);border:1px solid var(--dm-line2);background:var(--dm-panel);font-size:12.5px;display:flex;align-items:center;justify-content:space-between;gap:10px}',
   '.dm-notice.ok{border-color:var(--dm-ok-line);background:var(--dm-ok-bg);color:var(--dm-ok)}',
   '.dm-notice.bad{border-color:var(--dm-bad-line);background:var(--dm-bad-bg);color:var(--dm-bad)}',
+  '.dm-connect-banner{padding:12px 15px;border-radius:var(--dm-r-lg);border:1px solid var(--dm-run-line);background:var(--dm-run-bg);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}',
+  '.dm-connect-banner-main{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1 1 260px}',
+  '.dm-connect-banner-title{font-size:13px;font-weight:700;color:var(--dm-ink)}',
+  '.dm-connect-banner-sub{font-size:12px;color:var(--dm-ink2)}',
+  '.dm-connect-banner-acts{display:flex;align-items:center;gap:8px;flex-wrap:wrap}',
 
   // Budget bar
   '.dm-budget-card{border-radius:var(--dm-r-lg);border:1px solid var(--dm-line2);background:var(--dm-panel);padding:14px 16px;display:flex;flex-direction:column;gap:8px}',
@@ -163,11 +168,21 @@ export const DM_CSS = [
   '.dm-dlg-foot{padding:12px 18px;border-top:1px solid var(--dm-line);display:flex;align-items:center;justify-content:flex-end;gap:8px}',
   '.dm-quote-box{border-radius:var(--dm-r-sm);border-left:3px solid var(--dm-ok);background:var(--dm-sub);padding:10px 12px;font-size:12.5px;color:var(--dm-ink2)}',
 
+  // Connectors & details
+  '.dm-conn-row{border-radius:var(--dm-r-md);border:1px solid var(--dm-line);background:var(--dm-bg);padding:12px 14px;display:flex;align-items:center;justify-content:space-between;gap:12px;min-width:0}',
+  '.dm-conn-row.uninstalled{opacity:.68}',
+  '.dm-conn-head{display:flex;align-items:center;flex-wrap:wrap;gap:6px}',
+  '.dm-details{border-radius:var(--dm-r-lg);border:1px solid var(--dm-line2);background:var(--dm-panel);padding:12px 16px}',
+  '.dm-details summary{cursor:pointer;font-size:13px;font-weight:600;color:var(--dm-ink);list-style:none;display:flex;align-items:center;justify-content:space-between;gap:8px}',
+  '.dm-details summary::-webkit-details-marker{display:none}',
+  '.dm-details[open] summary{margin-bottom:10px}',
+
   // Container query strictly AFTER base grids for ~680px DSH split panel & narrow screens
   '@container dmroot (max-width: 660px){',
   '  .dm-inner{padding:16px 14px 56px}',
   '  .dm-wiki-grid{grid-template-columns:minmax(0,1fr)}',
-  '  .dm-row{flex-direction:column}',
+  '  .dm-row,.dm-conn-row{flex-direction:column;align-items:stretch}',
   '  .dm-row-acts{width:100%;justify-content:flex-end}',
+  '  .dm-connect-banner-acts{width:100%;justify-content:flex-end}',
   '}',
 ].join('\n');

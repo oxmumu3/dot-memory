@@ -8,7 +8,7 @@
 import readline from 'node:readline';
 import { DotMemoryStore } from '../src/core/index.mjs';
 
-const SERVER_INFO = { name: 'dot-memory', version: '0.1.0' };
+const SERVER_INFO = { name: 'dot-memory', version: '0.2.0' };
 const PROTOCOL = '2025-06-18';
 const store = new DotMemoryStore().ensureInitialized();
 
@@ -70,12 +70,12 @@ const TOOLS = [
   },
   {
     name: 'dot_memory_handoffs',
-    description: 'List recent cross-agent work handoffs from Antigravity, Claude Code, Codex, and DeepSeek Harness.',
+    description: 'List recent cross-agent work handoffs from Antigravity, Claude Code, Codex, Hermes, WorkBuddy, Cursor, and DeepSeek Harness.',
     inputSchema: {
       type: 'object',
       additionalProperties: false,
       properties: {
-        agent: { type: 'string', description: 'Optional agent filter: antigravity | claude-code | codex | dsh' },
+        agent: { type: 'string', description: 'Optional agent filter: antigravity | claude-code | codex | hermes | workbuddy | cursor | dsh' },
         workspace: { type: 'string', description: 'Optional workspace name filter' },
         status: { type: 'string', description: 'Optional status filter: done | blocked | error | waiting' },
         limit: { type: 'number', description: 'Max entries (default 12)' },
@@ -107,7 +107,7 @@ const TOOLS = [
       additionalProperties: false,
       required: ['agent', 'workspace', 'summary'],
       properties: {
-        agent: { type: 'string', description: 'antigravity | claude-code | codex | dsh | custom' },
+        agent: { type: 'string', description: 'antigravity | claude-code | codex | hermes | workbuddy | cursor | dsh | custom' },
         workspace: { type: 'string', description: 'Workspace or project name' },
         workspacePath: { type: 'string', description: 'Absolute workspace directory path' },
         status: { type: 'string', description: 'done | blocked | error | waiting (default done)' },

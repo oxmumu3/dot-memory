@@ -32,8 +32,8 @@ export function apply(ctx, config = {}) {
 
   // Publish versioned capability seam for peer plugins (e.g. DSH.dot)
   const service = Object.freeze({
-    version: '0.1.0',
-    features: Object.freeze(['living-memory', 'entity-wiki', 'handoff-bus', 'hybrid-search', 'flashback']),
+    version: '0.2.0',
+    features: Object.freeze(['living-memory', 'entity-wiki', 'handoff-bus', 'hybrid-search', 'flashback', 'agent-connectors']),
     store,
   });
   try {

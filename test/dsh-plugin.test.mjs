@@ -51,9 +51,15 @@ test('DSH host entry enforces double-mount guard, pre-step KV-cache delta inject
 
     const dispose1 = apply(ctx, { homeDir: home });
     const dispose2 = apply(ctx, { homeDir: home });
-    assert.equal(tools.length, 5);
-    assert.equal(services.get('dotMemory').version, '0.1.0');
+    assert.equal(tools.length, 6);
+    assert.equal(services.get('dotMemory').version, '0.2.0');
+    assert.ok(services.get('dotMemory').features.includes('agent-connectors'));
     assert.equal(typeof dispose2, 'function');
+
+    const manageTool = tools.find((t) => t.name === 'dot_memory_manage_connections');
+    assert.ok(manageTool);
+    const statusText = await manageTool.execute({ action: 'status' });
+    assert.match(statusText, /本机 Agent 探测/);
 
     // Add 1 living memory item
     services.get('dotMemory').store.addMemory({ bucket: 'style', text: '回答直击重点', sourceKind: 'manual' });
@@ -113,18 +119,20 @@ test('DSH host entry enforces double-mount guard, pre-step KV-cache delta inject
   }
 });
 
-test('Host routes block cross-site POST writes and handle memory/handoff actions safely', async () => {
+test('Host routes block cross-site POST writes and handle memory/handoff/connection actions safely', async () => {
   const home = makeTempHome();
+  const fakeUserHome = makeTempHome();
   try {
+    fs.mkdirSync(path.join(fakeUserHome, '.cursor'), { recursive: true });
     const store = new (await import('../src/core/index.mjs')).DotMemoryStore({ homeDir: home }).ensureInitialized();
 
     const evilReq = new Request('http://127.0.0.1/api/dot_memory/action', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Origin: 'https://evil.example', 'Sec-Fetch-Site': 'cross-site' },
-      body: JSON.stringify({ action: 'add_memory', text: 'bad' }),
+      body: JSON.stringify({ action: 'connect_all_installed' }),
     });
     assert.equal(isCrossSiteWrite(evilReq), true);
-    const evilRes = await handleActionRequest({ request: evilReq, store });
+    const evilRes = await handleActionRequest({ request: evilReq, store, homeDir: fakeUserHome });
     assert.equal(evilRes.status, 403);
 
     const goodReq = new Request('http://127.0.0.1/api/dot_memory/action', {
@@ -132,12 +140,25 @@ test('Host routes block cross-site POST writes and handle memory/handoff actions
       headers: { 'Content-Type': 'application/json', Origin: 'http://127.0.0.1:3080', 'Sec-Fetch-Site': 'same-origin' },
       body: JSON.stringify({ action: 'add_memory', bucket: 'rules', text: '测试规则条目' }),
     });
-    const goodRes = await handleActionRequest({ request: goodReq, store });
+    const goodRes = await handleActionRequest({ request: goodReq, store, homeDir: fakeUserHome });
     assert.equal(goodRes.status, 200);
-    const viewRes = await handleViewRequest({ store });
+
+    const connAllReq = new Request('http://127.0.0.1/api/dot_memory/action', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Origin: 'http://127.0.0.1:3080', 'Sec-Fetch-Site': 'same-origin' },
+      body: JSON.stringify({ action: 'connect_all_installed' }),
+    });
+    const connAllRes = await handleActionRequest({ request: connAllReq, store, homeDir: fakeUserHome });
+    assert.equal(connAllRes.status, 200);
+    const connAllJson = await connAllRes.json();
+    assert.deepEqual(connAllJson.result.connectedAgents, ['cursor']);
+
+    const viewRes = await handleViewRequest({ store, homeDir: fakeUserHome });
     const viewJson = await viewRes.json();
     assert.equal(viewJson.snapshot.memory.items.length, 1);
+    assert.equal(viewJson.connections.summary.connectedCount, 1);
   } finally {
     fs.rmSync(home, { recursive: true, force: true });
+    fs.rmSync(fakeUserHome, { recursive: true, force: true });
   }
 });

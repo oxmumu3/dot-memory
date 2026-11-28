@@ -7,6 +7,12 @@
  */
 
 import { buildIntegrationSnippets } from '../../bin/dot-memory.mjs';
+import {
+  connectAgent,
+  connectAllInstalled,
+  detectAgentConnections,
+  disconnectAgent,
+} from '../core/index.mjs';
 
 const MAX_BODY_BYTES = 256 * 1024;
 const BASE_HEADERS = {
@@ -57,15 +63,16 @@ async function readJsonBody(request) {
   }
 }
 
-export async function handleViewRequest({ store }) {
+export async function handleViewRequest({ store, homeDir } = {}) {
   return jsonReply({
     ok: true,
     snapshot: store.getSnapshot(),
     integrations: buildIntegrationSnippets(),
+    connections: detectAgentConnections({ homeDir, dotMemoryHome: store.homeDir }),
   });
 }
 
-export async function handleActionRequest({ request, store }) {
+export async function handleActionRequest({ request, store, homeDir } = {}) {
   if (isCrossSiteWrite(request)) {
     return jsonReply({ ok: false, error: 'Cross-site write rejected' }, 403);
   }
@@ -117,6 +124,22 @@ export async function handleActionRequest({ request, store }) {
     if (action === 'search') {
       const result = store.search({ query: body.query, alternates: body.alternates, limit: body.limit || 12 });
       return jsonReply({ ok: true, action, result });
+    }
+    if (action === 'refresh_connections') {
+      const connections = detectAgentConnections({ homeDir, dotMemoryHome: store.homeDir });
+      return jsonReply({ ok: true, action, connections });
+    }
+    if (action === 'connect_agent') {
+      const result = connectAgent({ agent: body.agent, homeDir, dotMemoryHome: store.homeDir });
+      return jsonReply({ ok: true, action, result, connections: result.connections, snapshot: store.getSnapshot() });
+    }
+    if (action === 'connect_all_installed') {
+      const result = connectAllInstalled({ homeDir, dotMemoryHome: store.homeDir });
+      return jsonReply({ ok: true, action, result, connections: result.connections, snapshot: store.getSnapshot() });
+    }
+    if (action === 'disconnect_agent') {
+      const result = disconnectAgent({ agent: body.agent, homeDir, dotMemoryHome: store.homeDir });
+      return jsonReply({ ok: true, action, result, connections: result.connections, snapshot: store.getSnapshot() });
     }
     return jsonReply({ ok: false, error: `Unknown action: ${action}` }, 400);
   } catch (err) {

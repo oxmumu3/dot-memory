@@ -9,7 +9,16 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { ensurePrivateDir, isGoogleProtected, isoDate, readSafeText, storageError } from './storage.mjs';
 
-const VALID_AGENTS = new Set(['dsh', 'antigravity', 'claude-code', 'codex', 'custom']);
+const VALID_AGENTS = new Set([
+  'dsh',
+  'antigravity',
+  'claude-code',
+  'codex',
+  'hermes',
+  'workbuddy',
+  'cursor',
+  'custom',
+]);
 const VALID_STATUSES = new Set(['done', 'blocked', 'error', 'waiting']);
 
 const squash = (s, max = 400) => String(s ?? '').replace(/\s+/gu, ' ').trim().slice(0, max);
@@ -96,8 +105,11 @@ export function extractHandoffFromStopPayload(agent, payload = {}, { now = new D
     (Array.isArray(payload.workspace_roots) ? payload.workspace_roots[0] : '') ||
     '',
   ).trim();
-  const workspace = squash(payload.workspace || (workspacePath ? path.basename(workspacePath) : '') || agent, 80);
-  const sessionId = squash(payload.conversationId || payload.sessionId || payload.session_id || payload.thread_id || 'unknown', 120);
+  const workspace = squash(payload.workspace || (workspacePath ? path.basename(workspacePath) : '') || payload.platform || agent, 80);
+  const sessionId = squash(
+    payload.conversationId || payload.sessionId || payload.session_id || payload.thread_id || payload.session_key || payload.chat_id || 'unknown',
+    120,
+  );
   const isError = payload.terminationReason === 'ERROR' || payload.status === 'error' || Boolean(payload.error);
   const isBlocked = payload.status === 'blocked' || payload.status === 'waiting' || payload.needsUserInput === true;
   const status = isError ? 'error' : (isBlocked ? 'blocked' : 'done');
@@ -105,7 +117,14 @@ export function extractHandoffFromStopPayload(agent, payload = {}, { now = new D
   let durationSec = Number(payload.turnDurationSec ?? payload.durationSec ?? 0) || 0;
   let toolCalls = Number(payload.toolCallCount ?? payload.toolCalls ?? 0) || 0;
   let mutatedFiles = Number(payload.mutatedCount ?? payload.mutatedFiles ?? 0) || 0;
-  const explicit = Boolean(payload.explicit || payload.forceHandoff);
+  const rawHermesReply = agent === 'hermes'
+    ? String(payload.response || payload.lastReply || payload.summary || '').trim()
+    : '';
+  const explicit = Boolean(
+    payload.explicit ||
+    payload.forceHandoff ||
+    (agent === 'hermes' && payload.explicit !== false && Buffer.byteLength(rawHermesReply, 'utf8') >= 160),
+  );
 
   let transcriptPrompt = '';
   let transcriptReply = '';
@@ -167,8 +186,14 @@ export function extractHandoffFromStopPayload(agent, payload = {}, { now = new D
     return { skipped: true, reason: 'below_significance_threshold' };
   }
 
-  const rawPrompt = squash(payload.lastUserInput || payload.prompt || payload.topicPrompt || transcriptPrompt, 160);
-  const rawReply = squash(payload.lastReply || payload.summary || payload.last_assistant_message || payload.error || transcriptReply, 460);
+  const rawPrompt = squash(
+    payload.lastUserInput || payload.prompt || payload.topicPrompt || payload.user_message || payload.message || transcriptPrompt,
+    160,
+  );
+  const rawReply = squash(
+    payload.lastReply || payload.summary || payload.last_assistant_message || payload.response || payload.assistant_message || payload.error || transcriptReply,
+    460,
+  );
   const title = squash(payload.title || rawPrompt || `${workspace} ${status}`, 140);
   const summary = rawReply || `${title}（${status}）`;
 

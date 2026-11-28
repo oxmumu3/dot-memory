@@ -1,11 +1,11 @@
 {
   "name": "@oxmumu3/dot-memory",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": false,
   "license": "MIT",
   "type": "module",
   "main": "index.js",
-  "description": "Dot 记忆总线 — Cross-agent local memory bus for DeepSeek Harness, Claude Code, Codex & Antigravity: 4KB cache-friendly living memory with verbatim quote verification, zero-LLM Entity Wiki & Flashback, and cross-agent handoff capture.",
+  "description": "Dot 记忆总线 — Cross-agent local memory bus for DeepSeek Harness, Claude Code, Codex, Antigravity, Hermes Agent, WorkBuddy & Cursor: 4KB cache-friendly living memory with verbatim quote verification, zero-LLM Entity Wiki & Flashback, and one-click Hook+MCP cross-agent connectors.",
   "author": "牛村木木山 <157776623+oxmumu3@users.noreply.github.com>",
   "repository": {
     "type": "git",
@@ -25,7 +25,10 @@
     "living-memory",
     "cross-agent",
     "handoff",
-    "entity-wiki"
+    "entity-wiki",
+    "hermes",
+    "workbuddy",
+    "cursor"
   ],
   "icon": "./icon.svg",
   "bin": {

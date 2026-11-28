@@ -19,14 +19,26 @@ const SAFE_SHELL = '/Users/shan/.local/share/hyperframes-runtime/safe-browser/ch
 const REACT_UMD = '/Users/shan/dsh-finder-scratch/finder-launch-video-20261115/node_modules/react/umd/react.production.min.js';
 const REACT_DOM_UMD = '/Users/shan/dsh-finder-scratch/finder-launch-video-20261115/node_modules/react-dom/umd/react-dom.production.min.js';
 const CLIENT_JS = path.join(rootDir, 'dist', 'client.js');
-const OUT_DIR = '/Users/shan/Library/Mobile Documents/com~apple~CloudDocs/Agent/output/dot-memory-v010-2026-11-25/screenshots';
+const OUT_DIR = '/Users/shan/Library/Mobile Documents/com~apple~CloudDocs/Agent/output/dot-memory-v020-2026-11-28/screenshots';
 
 fs.mkdirSync(OUT_DIR, { recursive: true });
 
 const MOCK_VIEW = {
   ok: true,
   integrations: {
-    mcpServer: { command: 'dot-memory-mcp', env: { DOT_MEMORY_HOME: '~/.local/share/dot-memory' } },
+    mcpServer: { command: '/opt/homebrew/bin/node', args: ['/Users/shan/.local/share/dot-memory/bin/dot-memory-mcp.mjs'] },
+  },
+  connections: {
+    summary: { total: 6, installedCount: 4, connectedCount: 2, partialCount: 1, unconnectedInstalled: ['codex', 'hermes'] },
+    snippets: { mcpServer: { command: '/opt/homebrew/bin/node', args: ['/Users/shan/Repos/dot-memory/bin/dot-memory-mcp.mjs'] } },
+    agents: [
+      { id: 'antigravity', label: 'Antigravity', installed: true, hookSupported: true, hookConnected: true, mcpSupported: true, mcpConnected: true, fullyConnected: true, note: 'Hook 写入 ~/.gemini/config/plugins/dot-memory-bridge/，MCP 写入 ~/.gemini/config/mcp_config.json' },
+      { id: 'claude-code', label: 'Claude Code', installed: true, hookSupported: true, hookConnected: true, mcpSupported: true, mcpConnected: true, fullyConnected: true, note: 'Hook 写入 ~/.claude/settings.json，MCP 写入 ~/.claude.json（不改动 CLAUDE.md）' },
+      { id: 'codex', label: 'Codex', installed: true, hookSupported: true, hookConnected: false, mcpSupported: true, mcpConnected: true, fullyConnected: false, note: '首次触发 Stop Hook 时请在 Codex 点击允许一次；MCP 写入 ~/.codex/config.toml' },
+      { id: 'hermes', label: 'Hermes Agent', installed: true, hookSupported: true, hookConnected: false, mcpSupported: true, mcpConnected: false, fullyConnected: false, note: 'Hook 监听 agent:end / session:end，MCP 写入 ~/.hermes/config.yaml 顶层 mcp_servers' },
+      { id: 'workbuddy', label: 'WorkBuddy / CodeBuddy', installed: false, hookSupported: true, hookConnected: false, mcpSupported: true, mcpConnected: false, fullyConnected: false, note: '兼容 ~/.workbuddy-ai / ~/.workbuddy / ~/.codebuddy（不改动规则 MD）' },
+      { id: 'cursor', label: 'Cursor', installed: false, hookSupported: false, hookConnected: false, mcpSupported: true, mcpConnected: false, fullyConnected: false, note: 'Cursor 通过 ~/.cursor/mcp.json 提供 stdio MCP 读写与主动记录（无独立 Stop Hook）' },
+    ],
   },
   snapshot: {
     budget: {
@@ -350,8 +362,10 @@ try {
     { name: '02-desktop-1440-dark-living.png', w: 1440, h: 900, dark: true, tabTestId: 'dm-tab-living' },
     { name: '03-desktop-1440-light-handoffs.png', w: 1440, h: 900, dark: false, tabTestId: 'dm-tab-handoffs' },
     { name: '04-desktop-1440-dark-wiki.png', w: 1440, h: 900, dark: true, tabTestId: 'dm-tab-wiki', search: '声纹' },
-    { name: '05-split-680-light.png', w: 680, h: 820, dark: false, tabTestId: 'dm-tab-living' },
-    { name: '06-narrow-390-dark.png', w: 390, h: 844, dark: true, tabTestId: 'dm-tab-living' },
+    { name: '05-desktop-1440-light-connect.png', w: 1440, h: 900, dark: false, tabTestId: 'dm-tab-connect' },
+    { name: '06-desktop-1440-dark-connect.png', w: 1440, h: 900, dark: true, tabTestId: 'dm-tab-connect' },
+    { name: '07-split-680-light-connect.png', w: 680, h: 820, dark: false, tabTestId: 'dm-tab-connect' },
+    { name: '08-narrow-390-dark-connect.png', w: 390, h: 844, dark: true, tabTestId: 'dm-tab-connect' },
   ];
 
   const report = [];

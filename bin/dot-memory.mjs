@@ -8,7 +8,17 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { DotMemoryStore, extractHandoffFromStopPayload } from '../src/core/index.mjs';
+import {
+  DotMemoryStore,
+  SUPPORTED_AGENTS,
+  connectAgent,
+  connectAllInstalled,
+  detectAgentConnections,
+  disconnectAgent,
+  extractHandoffFromStopPayload,
+  resolveRuntimePaths,
+  shellQuote,
+} from '../src/core/index.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, '..');
@@ -48,94 +58,45 @@ function readStdin() {
 }
 
 export function buildIntegrationSnippets() {
-  const mcpPath = path.join(REPO_ROOT, 'bin', 'dot-memory-mcp.mjs');
-  const cliPath = path.join(REPO_ROOT, 'bin', 'dot-memory.mjs');
+  const rt = resolveRuntimePaths({ repoRoot: REPO_ROOT });
   return {
     mcpServer: {
-      command: process.execPath,
-      args: [mcpPath],
+      command: rt.nodeBin,
+      args: [rt.mcpPath],
     },
     claudeCodeHook: {
       Stop: [{
         type: 'command',
-        command: `${process.execPath} ${cliPath} handoffs ingest-stdin --agent claude-code`,
+        command: `${shellQuote(rt.nodeBin)} ${shellQuote(rt.cliPath)} handoffs ingest-stdin --agent claude-code`,
         timeout: 10,
       }],
     },
     antigravityHook: {
       Stop: [{
         type: 'command',
-        command: `${process.execPath} ${cliPath} handoffs ingest-stdin --agent antigravity`,
+        command: `${shellQuote(rt.nodeBin)} ${shellQuote(rt.cliPath)} handoffs ingest-stdin --agent antigravity`,
         timeout: 10,
       }],
     },
     codexHook: {
-      command: `${process.execPath} ${cliPath} handoffs ingest-stdin --agent codex`,
+      command: `${shellQuote(rt.nodeBin)} ${shellQuote(rt.cliPath)} handoffs ingest-stdin --agent codex`,
     },
   };
 }
 
-export function installAgentHook({ agent, dryRun = false, homeDir = os.homedir() } = {}) {
-  const snippets = buildIntegrationSnippets();
-  if (agent === 'claude-code') {
-    const settingsPath = path.join(homeDir, '.claude', 'settings.json');
-    let current = {};
-    if (fs.existsSync(settingsPath)) {
-      current = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
-    }
-    const mcpServers = { ...(current.mcpServers || {}), 'dot-memory': snippets.mcpServer };
-    const hooks = { ...(current.hooks || {}) };
-    const existingStop = Array.isArray(hooks.Stop) ? hooks.Stop : [];
-    const cmdStr = snippets.claudeCodeHook.Stop[0].command;
-    const already = JSON.stringify(existingStop).includes('dot-memory.mjs');
-    if (!already) {
-      hooks.Stop = [...existingStop, { hooks: [snippets.claudeCodeHook.Stop[0]] }];
-    }
-    const next = { ...current, mcpServers, hooks };
-    if (!dryRun) {
-      fs.mkdirSync(path.dirname(settingsPath), { recursive: true });
-      fs.writeFileSync(settingsPath, JSON.stringify(next, null, 2) + '\n', { mode: 0o600 });
-    }
-    return { ok: true, agent, target: settingsPath, dryRun, hookAdded: !already, mcpConfigured: true };
-  }
-
-  if (agent === 'antigravity') {
-    const pluginDir = path.join(homeDir, '.gemini', 'config', 'plugins', 'dot-memory-bridge');
-    const hooksJsonPath = path.join(pluginDir, 'hooks.json');
-    const pluginJsonPath = path.join(pluginDir, 'plugin.json');
-    const hooksDoc = { 'dot-memory-stop': snippets.antigravityHook };
-    const pluginDoc = {
-      name: 'dot-memory-bridge',
-      version: '0.1.0',
-      description: 'Record significant Antigravity turn handoffs into @oxmumu3/dot-memory',
-    };
-    if (!dryRun) {
-      fs.mkdirSync(pluginDir, { recursive: true });
-      fs.writeFileSync(pluginJsonPath, JSON.stringify(pluginDoc, null, 2) + '\n');
-      fs.writeFileSync(hooksJsonPath, JSON.stringify(hooksDoc, null, 2) + '\n');
-    }
-    return { ok: true, agent, target: hooksJsonPath, dryRun, hookAdded: true };
-  }
-
-  if (agent === 'codex') {
-    return {
-      ok: true,
-      agent,
-      dryRun: true,
-      note: 'Add the MCP server & notify hook to ~/.codex/config.toml',
-      mcpToml: `[mcp_servers.dot-memory]\ncommand = "${snippets.mcpServer.command}"\nargs = ["${snippets.mcpServer.args[0]}"]`,
-      hookCommand: snippets.codexHook.command,
-    };
-  }
-
-  throw new Error(`Unsupported agent: ${agent}. Expected antigravity | claude-code | codex.`);
+export function installAgentHook({ agent, dryRun = false, homeDir = os.homedir(), dotMemoryHome } = {}) {
+  const rt = resolveRuntimePaths({ repoRoot: REPO_ROOT });
+  return connectAgent({ agent, dryRun, homeDir, dotMemoryHome, runtime: rt });
 }
 
 async function main() {
-  const store = new DotMemoryStore({ homeDir: argOf('--home') }).ensureInitialized();
+  const homeOverride = argOf('--home');
+  const store = new DotMemoryStore({ homeDir: homeOverride }).ensureInitialized();
+  const rt = resolveRuntimePaths({ repoRoot: REPO_ROOT });
 
   if (cmd === 'status' || cmd === 'doctor') {
     const snap = store.getSnapshot();
+    const conn = detectAgentConnections({ dotMemoryHome: store.homeDir, runtime: rt });
     const out = {
       ok: true,
       homeDir: snap.homeDir,
@@ -144,8 +105,43 @@ async function main() {
       lastDreamAt: snap.memory.lastDreamAt,
       handoffsCount: snap.handoffs.length,
       wikiPagesCount: snap.wikiPages.length,
+      connections: conn.summary,
     };
     console.log(JSON.stringify(out, null, 2));
+    return;
+  }
+
+  if (cmd === 'connections') {
+    console.log(JSON.stringify(detectAgentConnections({ dotMemoryHome: store.homeDir, runtime: rt }), null, 2));
+    return;
+  }
+
+  if (cmd === 'connect') {
+    const target = argOf('--agent') || positional(1)[0] || 'all';
+    const dryRun = has('--dry-run');
+    const res = target === 'all'
+      ? connectAllInstalled({ dotMemoryHome: store.homeDir, dryRun, runtime: rt })
+      : connectAgent({ agent: target, dotMemoryHome: store.homeDir, dryRun, runtime: rt });
+    console.log(JSON.stringify(res, null, 2));
+    return;
+  }
+
+  if (cmd === 'disconnect') {
+    const target = argOf('--agent') || positional(1)[0];
+    if (!target) {
+      console.error(`Missing --agent <${SUPPORTED_AGENTS.map((a) => a.id).join('|')}|all>`);
+      process.exit(1);
+    }
+    const dryRun = has('--dry-run');
+    if (target === 'all') {
+      const snap = detectAgentConnections({ dotMemoryHome: store.homeDir, runtime: rt });
+      const results = snap.agents
+        .filter((a) => a.hookConnected || a.mcpConnected)
+        .map((a) => disconnectAgent({ agent: a.id, dotMemoryHome: store.homeDir, dryRun }));
+      console.log(JSON.stringify({ ok: true, dryRun, disconnected: results.map((r) => r.agent), results }, null, 2));
+      return;
+    }
+    console.log(JSON.stringify(disconnectAgent({ agent: target, dotMemoryHome: store.homeDir, dryRun }), null, 2));
     return;
   }
 
@@ -279,7 +275,7 @@ async function main() {
 
   if (cmd === 'install-hooks') {
     const agent = argOf('--agent') || 'antigravity';
-    const res = installAgentHook({ agent, dryRun: has('--dry-run') });
+    const res = installAgentHook({ agent, dryRun: has('--dry-run'), dotMemoryHome: store.homeDir });
     console.log(JSON.stringify(res, null, 2));
     return;
   }

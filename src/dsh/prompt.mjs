@@ -7,9 +7,10 @@ export const DOT_MEMORY_PROMPT_MAX_BYTES = 600;
 
 export const DOT_MEMORY_SYSTEM_PROMPT = [
   '[Dot 记忆总线 | 跨工具共享记忆]',
-  '1. 当用户问及过往偏好、其他工具（Antigravity/Claude Code/Codex）里的进展、或项目历史决定时，优先调用 dot_memory_search / dot_memory_wiki_read / dot_memory_handoffs 查证。',
-  '2. 仅当用户明确纠正偏好、反复强调规范或要求记住时，调用 dot_memory_propose 提交候选（必须附用户原话 quote），切勿静默臆测。',
-  '3. 日历、邮件、实时余额等易变事实仍须调用对应实时工具，不以静态记忆替代。',
+  '1. 查跨工具历史决定、偏好或进展，先调 dot_memory_search / wiki_read / handoffs。',
+  '2. 用户明确纠正偏好或规范时才调 dot_memory_propose（须带原话 quote），禁臆测。',
+  '3. 用户要求检测或接入本机其他 Agent 时，先调 dot_memory_manage_connections(status) 列清单，确认后再 connect。',
+  '4. 日历、邮件等易变实时信息仍调对应实时工具。',
 ].join('\n');
 
 export function registerDotMemoryPrompt(ctx, log = () => {}) {
